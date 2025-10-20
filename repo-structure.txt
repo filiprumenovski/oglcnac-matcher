@@ -1,0 +1,33 @@
+.
+├── .DS_Store
+├── .gitignore
+├── data
+│   ├── .DS_Store
+│   ├── interim
+│   ├── processed
+│   └── raw
+│       ├── .DS_Store
+│       └── Zhengping Yi human proteomics data
+│           ├── ~$OIR8_Sup&Pel_O-GlcNAc enrichment_HexNAc (ST)Sites.xlsx
+│           ├── ~$OIR8_Sup&Pel_O-GlcNAc enrichment_Phospho (STY)Sites.xlsx
+│           ├── ~$OIR8_Sup&Pel_O-GlcNAc enrichment_proteinGroups.xlsx
+│           ├── OIR8_Sup&Pel_O-GlcNAc enrichment_HexNAc (ST)Sites.xlsx
+│           ├── OIR8_Sup&Pel_O-GlcNAc enrichment_Phospho (STY)Sites.xlsx
+│           └── OIR8_Sup&Pel_O-GlcNAc enrichment_proteinGroups.xlsx
+├── notebooks
+├── README.md
+├── repo-structure.txt
+├── reports
+│   └── figures
+├── src
+│   ├── .DS_Store
+│   └── oglcnac_matcher
+│       ├── __init__.py
+│       ├── cli.py
+│       ├── io.py
+│       ├── matcher.py
+│       ├── parsers.py
+│       └── viz.py
+└── tests
+
+12 directories, 19 files
