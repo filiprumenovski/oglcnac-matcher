@@ -1,33 +1,63 @@
 .
+├── .archive
+│   └── oglcnac-matcher_bak
+│       ├── .gitignore
+│       ├── README.md
+│       └── src
+│           └── oglcnac_matcher
+│               ├── __init__.py
+│               ├── cli.py
+│               ├── io.py
+│               ├── matcher.py
+│               ├── parsers.py
+│               └── viz.py
 ├── .DS_Store
 ├── .gitignore
+├── .pytest_cache
+│   ├── .gitignore
+│   ├── CACHEDIR.TAG
+│   ├── README.md
+│   └── v
+│       └── cache
+│           ├── lastfailed
+│           └── nodeids
 ├── data
-│   ├── .DS_Store
 │   ├── interim
+│   ├── odb
+│   │   └── raw
+│   │       └── homo-sapiens.csv
 │   ├── processed
+│   │   ├── hexnac_sites_clean.csv
+│   │   ├── phospho_sites_clean.csv
+│   │   └── protein_groups_clean.csv
 │   └── raw
-│       ├── .DS_Store
-│       └── Zhengping Yi human proteomics data
-│           ├── ~$OIR8_Sup&Pel_O-GlcNAc enrichment_HexNAc (ST)Sites.xlsx
-│           ├── ~$OIR8_Sup&Pel_O-GlcNAc enrichment_Phospho (STY)Sites.xlsx
-│           ├── ~$OIR8_Sup&Pel_O-GlcNAc enrichment_proteinGroups.xlsx
-│           ├── OIR8_Sup&Pel_O-GlcNAc enrichment_HexNAc (ST)Sites.xlsx
-│           ├── OIR8_Sup&Pel_O-GlcNAc enrichment_Phospho (STY)Sites.xlsx
-│           └── OIR8_Sup&Pel_O-GlcNAc enrichment_proteinGroups.xlsx
+│       ├── HexNAc-sites.xlsx
+│       ├── phospho-sites.xlsx
+│       └── protein-groups.xlsx
 ├── notebooks
+├── pyproject.toml
 ├── README.md
 ├── repo-structure.txt
 ├── reports
 │   └── figures
+├── scripts
+│   └── run_parser.py
 ├── src
-│   ├── .DS_Store
-│   └── oglcnac_matcher
-│       ├── __init__.py
-│       ├── cli.py
-│       ├── io.py
-│       ├── matcher.py
-│       ├── parsers.py
-│       └── viz.py
+│   ├── oglcnac_matcher
+│   │   ├── __init__.py
+│   │   ├── cli.py
+│   │   ├── io.py
+│   │   ├── matcher.py
+│   │   ├── parsers.py
+│   │   └── viz.py
+│   └── oglcnac_matcher.egg-info
+│       ├── dependency_links.txt
+│       ├── PKG-INFO
+│       ├── requires.txt
+│       ├── SOURCES.txt
+│       └── top_level.txt
 └── tests
+    ├── smoketest_parser.py
+    └── test_matcher.py
 
-12 directories, 19 files
+22 directories, 39 files
