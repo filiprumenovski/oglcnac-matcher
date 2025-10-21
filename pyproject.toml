@@ -6,7 +6,15 @@ build-backend = "setuptools.build_meta"
 name = "oglcnac-matcher"
 version = "0.0.1"
 requires-python = ">=3.10"
-dependencies = ["pandas"]
+dependencies = [
+    "pandas>=2.2",
+    "matplotlib>=3.8",
+    "seaborn>=0.13",
+    "matplotlib-venn>=0.11.10",
+]
+
+[project.optional-dependencies]
+viz = ["plotly>=5", "kaleido>=0.2", "seaborn>=0.13", "matplotlib>=3.8", "pandas>=2.2"]
 
 [tool.setuptools.packages.find]
 where = ["src"]

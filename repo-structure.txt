@@ -22,12 +22,22 @@
 │           ├── lastfailed
 │           └── nodeids
 ├── data
+│   ├── .DS_Store
 │   ├── interim
 │   ├── odb
+│   │   ├── .DS_Store
 │   │   └── raw
 │   │       └── homo-sapiens.csv
 │   ├── processed
+│   │   ├── .DS_Store
 │   │   ├── hexnac_sites_clean.csv
+│   │   ├── matches
+│   │   │   ├── _meta_run.json
+│   │   │   ├── hexnac_site_matches.csv
+│   │   │   ├── no_match.csv
+│   │   │   ├── phospho_on_odb_proteins.csv
+│   │   │   ├── proteins_overlap.csv
+│   │   │   └── unresolved_or_ambiguous.csv
 │   │   ├── phospho_sites_clean.csv
 │   │   └── protein_groups_clean.csv
 │   └── raw
@@ -39,17 +49,26 @@
 ├── README.md
 ├── repo-structure.txt
 ├── reports
-│   └── figures
+│   ├── .DS_Store
+│   ├── figs
+│   │   └── .DS_Store
+│   ├── figures
+│   └── quick
+│       ├── protein_match_tiers.png
+│       ├── site_match_tiers.png
+│       └── summary.md
 ├── scripts
 │   └── run_parser.py
 ├── src
+│   ├── .DS_Store
 │   ├── oglcnac_matcher
 │   │   ├── __init__.py
+│   │   ├── .DS_Store
 │   │   ├── cli.py
 │   │   ├── io.py
 │   │   ├── matcher.py
 │   │   ├── parsers.py
-│   │   └── viz.py
+│   │   └── report.py
 │   └── oglcnac_matcher.egg-info
 │       ├── dependency_links.txt
 │       ├── PKG-INFO
@@ -60,4 +79,4 @@
     ├── smoketest_parser.py
     └── test_matcher.py
 
-22 directories, 39 files
+25 directories, 55 files
