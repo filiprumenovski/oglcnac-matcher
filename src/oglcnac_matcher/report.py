@@ -43,12 +43,9 @@ _DEFAULT_CONFIG = {
         ],
         "venn": [
             {
-                "title": "ODB vs Experimental Proteins",
-                "basename": "venn_odb_vs_exp",
-                "sets": [
-                    {"name": "ODB", "csv": "homo-sapiens.csv", "id_column": "Entry"},
-                    {"name": "Experimental", "csv": "protein_groups_clean.csv", "id_column": "Protein IDs"},
-                ],
+                "title": "Matched ODB vs HexNAc Sites vs Phospho",
+                "basename": "venn_matched_vs_sites_vs_phospho",
+                "kind": "derived_match_sets"
             }
         ],
     },
@@ -172,6 +169,42 @@ def plot_venn(sets: list[tuple[str, set[str]]], title: str, out_png: Path) -> No
     plt.close(fig)
 
 
+def _build_derived_match_sets(matches_dir: Path) -> list[tuple[str, set[str]]]:
+    """
+    Build 3 sets from matches outputs only:
+      A: all ODB-matched proteins (proteins_overlap.csv → 'odb_uniprot')
+      B: proteins with ≥1 matched HexNAc site (hexnac_site_matches.csv where site_match_tier != 'NO_MATCH' → 'odb_uniprot')
+      C: proteins with phospho overlap on matched ODB proteins (phospho_on_odb_proteins.csv → 'odb_uniprot')
+    Missing files yield empty sets; function never raises.
+    """
+    def _colset(csv_name: str, col: str, predicate: callable | None = None) -> set[str]:
+        p = _resolve_path(matches_dir, csv_name)
+        if not p.exists():
+            logger.warning("CSV not found for derived sets: %s", p)
+            return set()
+        try:
+            df = pd.read_csv(p)
+        except Exception as e:
+            logger.warning("Failed reading %s: %s", p, e)
+            return set()
+        if predicate is not None:
+            try:
+                df = df[predicate(df)]
+            except Exception as e:
+                logger.warning("Predicate failed for %s: %s", p, e)
+                return set()
+        if col not in df.columns:
+            logger.warning("Column '%s' missing in %s", col, p)
+            return set()
+        vals = {str(x).strip().upper() for x in df[col].dropna().unique().tolist()}
+        return {v for v in vals if v}
+
+    set_matched = _colset("proteins_overlap.csv", "odb_uniprot")
+    set_sites   = _colset("hexnac_site_matches.csv", "odb_uniprot", predicate=lambda d: d["site_match_tier"].astype(str) != "NO_MATCH")
+    set_phospho = _colset("phospho_on_odb_proteins.csv", "odb_uniprot")
+    return [("ODB matched", set_matched), ("HexNAc sites matched", set_sites), ("Phospho overlap", set_phospho)]
+
+
 def render_report(config_or_path: Path | dict[str, Any]) -> int:
     """Render the quick Markdown report from a configuration JSON or dict config."""
 
@@ -241,10 +274,26 @@ def render_report(config_or_path: Path | dict[str, Any]) -> int:
         except Exception as exc:  # pragma: no cover - defensive
             warnings.append(f"Bar chart '{title_bar}' failed: {exc}.")
 
-    for venn_spec in sections.get("venn", []):
-        title_venn = venn_spec.get("title", "Venn Diagram")
-        basename = venn_spec.get("basename", _sanitize_basename(title_venn))
-        set_specs = venn_spec.get("sets", [])
+    for spec in sections.get("venn", []):
+        title_venn = spec.get("title", "Venn Diagram")
+        basename = spec.get("basename", _sanitize_basename(title_venn))
+        out_png = outdir / f"{basename}.png"
+
+        # New: derived sets from matches/ only
+        if spec.get("kind") == "derived_match_sets":
+            sets = _build_derived_match_sets(matches_dir)
+            if all(len(s[1]) == 0 for s in sets):
+                warnings.append(f"Venn '{title_venn}' skipped: all derived sets empty.")
+                continue
+            try:
+                plot_venn(sets, title_venn, out_png)
+                venn_outputs.append((title_venn, out_png.name))
+            except Exception as exc:  # pragma: no cover - defensive
+                warnings.append(f"Venn '{title_venn}' failed: {exc}.")
+            continue
+
+        # Legacy explicit CSV-based sets
+        set_specs = spec.get("sets", [])
         if len(set_specs) not in (2, 3):
             warnings.append(f"Venn '{title_venn}' skipped: requires 2 or 3 sets.")
             continue
@@ -266,16 +315,12 @@ def render_report(config_or_path: Path | dict[str, Any]) -> int:
                 skip = True
                 break
             if column not in df.columns:
-                warnings.append(
-                    f"Venn '{title_venn}' skipped: column '{column}' missing in {csv_path}."
-                )
+                warnings.append(f"Venn '{title_venn}' skipped: column '{column}' missing in {csv_path}.")
                 skip = True
                 break
             ids = _extract_ids(df[column])
             if not ids:
-                warnings.append(
-                    f"Venn '{title_venn}' skipped: set '{name}' has no identifiers in column '{column}'."
-                )
+                warnings.append(f"Venn '{title_venn}' skipped: set '{name}' has no identifiers in column '{column}'.")
                 skip = True
                 break
             sets_data.append((name, ids))
@@ -283,7 +328,6 @@ def render_report(config_or_path: Path | dict[str, Any]) -> int:
         if skip:
             continue
 
-        out_png = outdir / f"{basename}.png"
         try:
             plot_venn(sets_data, title_venn, out_png)
             venn_outputs.append((title_venn, out_png.name))
@@ -346,10 +390,38 @@ def _build_markdown(
 
 
 def _resolve_path(base_dir: Path, csv_name: str) -> Path:
+    """Resolve a CSV path relative to `base_dir` with smart fallbacks.
+
+    Order of checks:
+    1) Absolute path → return as-is
+    2) `base_dir / csv_name` (e.g., matches dir)
+    3) Common data roots within the repo (processed/raw/external, ODB dirs, project root)
+    4) Fallback to `base_dir / csv_name` even if missing (so callers can log a helpful path)
+    """
     candidate = Path(csv_name)
     if candidate.is_absolute():
         return candidate
-    return base_dir / candidate
+
+    primary = base_dir / candidate
+    if primary.exists():
+        return primary
+
+    common_roots = (
+        Path("data/processed/matches"),  # typical matcher outputs
+        Path("data/processed"),
+        Path("data/raw"),
+        Path("data/external"),
+        Path("data/odb/raw"),           # ODB CSVs often live here
+        Path("data/odb"),
+        Path("data"),
+        Path("."),                      # repo root as last resort
+    )
+    for root in common_roots:
+        alt = root / candidate
+        if alt.exists():
+            return alt
+
+    return primary
 
 
 def _sanitize_basename(text: str) -> str:
@@ -378,6 +450,9 @@ def _extract_ids(series: pd.Series) -> set[str]:
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Generate a quick Markdown summary of matcher outputs.")
     parser.add_argument("--config", type=Path, help="Path to the report configuration JSON.")
+    parser.add_argument("--matches-dir", type=Path, help="Override matches_dir in config (e.g., data/processed/matches).")
+    parser.add_argument("--outdir", type=Path, help="Override output directory (e.g., reports/quick).")
+    parser.add_argument("--title", type=str, help="Override report title.")
     parser.add_argument("--dump-default-config", action="store_true", help="Print the default configuration JSON and exit.")
     parser.add_argument("--quiet", action="store_true", help="Reduce logging verbosity.")
     return parser.parse_args()
@@ -400,9 +475,29 @@ def main() -> int:
 
     if not args.config:
         logger.info("No --config provided; using built-in defaults.")
-        return render_report(_DEFAULT_CONFIG)
+        config: dict[str, Any] = json.loads(json.dumps(_DEFAULT_CONFIG))
+    else:
+        config = {"__CONFIG_PATH__": str(args.config)}  # marker for debugging
+        # Let render_report load/validate; start with path
+        cfg_path = args.config
+        if not cfg_path.exists():
+            logger.error("Config not found: %s", cfg_path)
+            return 1
+        try:
+            config = json.loads(cfg_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            logger.error("Invalid JSON in %s: %s", cfg_path, exc)
+            return 1
 
-    return render_report(args.config)
+    # Apply CLI overrides if provided
+    if args.matches_dir is not None:
+        config["matches_dir"] = str(args.matches_dir)
+    if args.outdir is not None:
+        config["outdir"] = str(args.outdir)
+    if args.title is not None:
+        config["title"] = args.title
+
+    return render_report(config)
 
 
 if __name__ == "__main__":  # pragma: no cover
